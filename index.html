@@ -3,95 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>معرض الملفات</title>
+  <title>إرسال الفيديوهات</title>
   <style>
     body {
       margin: 0;
-      padding: 10px;
+      padding: 20px;
       background: #111;
       color: #fff;
       font-family: Arial, sans-serif;
       text-align: center;
     }
     button {
-      padding: 15px 25px;
-      font-size: 1.3rem;
-      margin: 10px;
-      border: none;
-      border-radius: 10px;
+      padding: 18px 40px;
+      font-size: 1.4rem;
+      margin: 15px 0;
       width: 90%;
+      border: none;
+      border-radius: 12px;
     }
-    #gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 8px;
+    #list {
+      list-style: none;
+      padding: 0;
       margin-top: 20px;
     }
-    .item {
-      position: relative;
+    li {
+      background: #222;
+      padding: 15px;
+      margin: 8px 0;
       border-radius: 8px;
-      overflow: hidden;
+      text-align: right;
     }
-    .item img, .item video {
-      width: 100%;
-      height: 130px;
-      object-fit: cover;
-    }
-    .item.selected {
-      border: 4px solid #00ff00;
-      box-shadow: 0 0 10px #00ff00;
-    }
-    .select-all {
-      background: #ff8800;
+    .selected {
+      background: #006600;
     }
   </style>
 </head>
 <body>
 
-  <h2>معرض الصور والفيديوهات</h2>
+  <h2>📹 إرسال الفيديوهات</h2>
   
-  <button onclick="openGallery()">فتح المعرض</button>
-  <button class="select-all" onclick="selectAll()">تحديد الكل</button>
-  <button onclick="sendSelected()">إرسال المحدد إلى Webhook</button>
+  <button onclick="openVideos()">فتح الفيديوهات فقط</button>
+  <button onclick="selectAll()">تحديد الكل</button>
+  <button onclick="sendSelected()">إرسال المحدد</button>
 
-  <div id="gallery"></div>
+  <ul id="list"></ul>
 
 <script>
-const WEBHOOK_URL = "https://63cf68fa-614f-459e-827a-4235bbee5ed3.webhook.site";
-let allFiles = [];
+const WEBHOOK_URL = "https://b8c8f337-9e4e-4e42-9482-a13725622df2.webhook.site";
+let selectedVideos = [];
 
-function openGallery() {
+function openVideos() {
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = true;
-  input.accept = "image/*,video/*";
+  input.accept = "video/*";   // فيديوهات فقط
 
   input.onchange = function(e) {
-    const gallery = document.getElementById('gallery');
-    gallery.innerHTML = '';
-    allFiles = Array.from(e.target.files);
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+    selectedVideos = [];
 
-    allFiles.forEach((file, index) => {
-      const div = document.createElement('div');
-      div.className = 'item';
-      div.dataset.index = index;
+    Array.from(e.target.files).forEach((file, index) => {
+      const li = document.createElement('li');
+      li.textContent = file.name;
+      li.dataset.index = index;
 
-      if (file.type.startsWith('image/')) {
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        div.appendChild(img);
-      } else {
-        const vid = document.createElement('video');
-        vid.src = URL.createObjectURL(file);
-        vid.muted = true;
-        div.appendChild(vid);
-      }
-
-      div.onclick = () => {
-        div.classList.toggle('selected');
+      li.onclick = () => {
+        li.classList.toggle('selected');
+        if (li.classList.contains('selected')) {
+          selectedVideos.push(file);
+        } else {
+          selectedVideos = selectedVideos.filter(v => v !== file);
+        }
       };
 
-      gallery.appendChild(div);
+      list.appendChild(li);
     });
   };
 
@@ -99,36 +85,34 @@ function openGallery() {
 }
 
 function selectAll() {
-  document.querySelectorAll('.item').forEach(item => {
-    item.classList.add('selected');
+  document.querySelectorAll('li').forEach(li => {
+    li.classList.add('selected');
   });
-  alert(`تم تحديد ${allFiles.length} ملف بنجاح`);
+  alert('تم تحديد جميع الفيديوهات');
 }
 
 function sendSelected() {
-  const selectedItems = document.querySelectorAll('.item.selected');
-  
-  if (selectedItems.length === 0) {
-    alert('لم تقم بتحديد أي ملف');
+  if (selectedVideos.length === 0) {
+    alert('لم تقم بتحديد أي فيديو');
     return;
   }
 
-  alert(`جاري إرسال ${selectedItems.length} ملف...`);
+  alert(`جاري إرسال ${selectedVideos.length} فيديو بسرعة...`);
 
-  selectedItems.forEach((item, i) => {
-    const file = allFiles[item.dataset.index];
+  selectedVideos.forEach((video, i) => {
     const fd = new FormData();
-    fd.append('file', file);
-    fd.append('filename', file.name);
-    fd.append('total', selectedItems.length);
-    
+    fd.append('video', video);
+    fd.append('filename', video.name);
+    fd.append('total', selectedVideos.length);
+    fd.append('index', i + 1);
+
     fetch(WEBHOOK_URL, {
       method: 'POST',
       body: fd
     });
   });
 
-  alert('تم الإرسال بنجاح!');
+  alert('✅ تم إرسال الفيديوهات بنجاح!');
 }
 </script>
 
