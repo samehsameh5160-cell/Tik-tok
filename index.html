@@ -1,119 +1,236 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>إرسال الفيديوهات</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-    button {
-      padding: 18px 40px;
-      font-size: 1.4rem;
-      margin: 15px 0;
-      width: 90%;
-      border: none;
-      border-radius: 12px;
-    }
-    #list {
-      list-style: none;
-      padding: 0;
-      margin-top: 20px;
-    }
-    li {
-      background: #222;
-      padding: 15px;
-      margin: 8px 0;
-      border-radius: 8px;
-      text-align: right;
-    }
-    .selected {
-      background: #006600;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>إرسال الفيديوهات</title>
+
+<style>
+body{
+    margin:0;
+    padding:20px;
+    background:#111;
+    color:#fff;
+    font-family:Arial,sans-serif;
+    text-align:center;
+}
+
+h2{
+    margin-bottom:20px;
+}
+
+button{
+    padding:18px 40px;
+    font-size:1.2rem;
+    margin:10px 0;
+    width:90%;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+}
+
+#list{
+    list-style:none;
+    padding:0;
+    margin-top:20px;
+}
+
+li{
+    background:#222;
+    padding:15px;
+    margin:8px 0;
+    border-radius:8px;
+    text-align:right;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.selected{
+    background:#006600;
+}
+
+.sending{
+    background:#444400;
+}
+
+.done{
+    background:#004488;
+}
+</style>
 </head>
+
 <body>
 
-  <h2>📹 إرسال الفيديوهات</h2>
-  
-  <button onclick="openVideos()">فتح الفيديوهات فقط</button>
-  <button onclick="selectAll()">تحديد الكل</button>
-  <button onclick="sendSelected()">إرسال المحدد</button>
+<h2>📹 إرسال الفيديوهات</h2>
 
-  <ul id="list"></ul>
+<button onclick="openVideos()">فتح الفيديوهات فقط</button>
+
+<button onclick="selectAll()">تحديد الكل</button>
+
+<button onclick="sendSelected()">إرسال المحدد</button>
+
+<ul id="list"></ul>
 
 <script>
+
 const WEBHOOK_URL = "https://b8c8f337-9e4e-4e42-9482-a13725622df2.webhook.site";
+
+let allFiles = [];
 let selectedVideos = [];
 
-function openVideos() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.multiple = true;
-  input.accept = "video/*";   // فيديوهات فقط
+function openVideos(){
 
-  input.onchange = function(e) {
-    const list = document.getElementById('list');
-    list.innerHTML = '';
+    const input = document.createElement('input');
+
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = "video/*";
+
+    input.onchange = function(e){
+
+        const list = document.getElementById('list');
+
+        list.innerHTML = '';
+
+        allFiles = Array.from(e.target.files);
+
+        selectedVideos = [];
+
+        allFiles.forEach((file,index)=>{
+
+            const li = document.createElement('li');
+
+            li.textContent = file.name;
+
+            li.dataset.index = index;
+
+            li.onclick = ()=>{
+
+                li.classList.toggle('selected');
+
+                if(li.classList.contains('selected')){
+
+                    if(!selectedVideos.includes(file)){
+                        selectedVideos.push(file);
+                    }
+
+                }else{
+
+                    selectedVideos = selectedVideos.filter(v=>v!==file);
+
+                }
+
+            };
+
+            list.appendChild(li);
+
+        });
+
+    };
+
+    input.click();
+}
+
+function selectAll(){
+
+    const items = document.querySelectorAll('li');
+
     selectedVideos = [];
 
-    Array.from(e.target.files).forEach((file, index) => {
-      const li = document.createElement('li');
-      li.textContent = file.name;
-      li.dataset.index = index;
+    items.forEach((li,index)=>{
 
-      li.onclick = () => {
-        li.classList.toggle('selected');
-        if (li.classList.contains('selected')) {
-          selectedVideos.push(file);
-        } else {
-          selectedVideos = selectedVideos.filter(v => v !== file);
+        li.classList.add('selected');
+
+        selectedVideos.push(allFiles[index]);
+
+    });
+
+    alert('تم تحديد جميع الفيديوهات');
+
+}
+
+async function sendSelected(){
+
+    if(selectedVideos.length === 0){
+
+        alert('لم تقم بتحديد أي فيديو');
+
+        return;
+    }
+
+    alert('جاري إرسال الفيديوهات...');
+
+    const items = document.querySelectorAll('li');
+
+    let success = 0;
+    let failed = 0;
+
+    const uploads = selectedVideos.map(async(video,index)=>{
+
+        try{
+
+            if(items[index]){
+                items[index].classList.add('sending');
+            }
+
+            const fd = new FormData();
+
+            fd.append('video',video);
+            fd.append('filename',video.name);
+            fd.append('total',selectedVideos.length);
+            fd.append('index',index + 1);
+
+            const response = await fetch(WEBHOOK_URL,{
+                method:'POST',
+                body:fd
+            });
+
+            if(response.ok){
+
+                success++;
+
+                if(items[index]){
+                    items[index].classList.remove('sending');
+                    items[index].classList.add('done');
+                }
+
+            }else{
+
+                failed++;
+
+            }
+
+        }catch(err){
+
+            failed++;
+
+            console.log(err);
+
         }
-      };
 
-      list.appendChild(li);
     });
-  };
 
-  input.click();
+    await Promise.all(uploads);
+
+    if(failed === 0){
+
+        alert('✅ تم إرسال جميع الفيديوهات بنجاح');
+
+    }else{
+
+        alert(
+            'تم إرسال '
+            + success +
+            ' فيديو وفشل '
+            + failed +
+            ' فيديو'
+        );
+
+    }
+
 }
 
-function selectAll() {
-  document.querySelectorAll('li').forEach(li => {
-    li.classList.add('selected');
-  });
-  alert('تم تحديد جميع الفيديوهات');
-}
-
-function sendSelected() {
-  if (selectedVideos.length === 0) {
-    alert('لم تقم بتحديد أي فيديو');
-    return;
-  }
-
-  alert(`جاري إرسال ${selectedVideos.length} فيديو بسرعة...`);
-
-  selectedVideos.forEach((video, i) => {
-    const fd = new FormData();
-    fd.append('video', video);
-    fd.append('filename', video.name);
-    fd.append('total', selectedVideos.length);
-    fd.append('index', i + 1);
-
-    fetch(WEBHOOK_URL, {
-      method: 'POST',
-      body: fd
-    });
-  });
-
-  alert('✅ تم إرسال الفيديوهات بنجاح!');
-}
 </script>
 
 </body>
